@@ -12,6 +12,12 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type testToolParams struct {
@@ -605,4 +611,303 @@ func TestEmptyStructJSONSchema(t *testing.T) {
 	propertiesMap, ok := properties.(map[string]any)
 	assert.True(t, ok, "properties should be a map")
 	assert.Len(t, propertiesMap, 0, "properties should be an empty map")
+}
+
+func TestToolTracingInstrumentation(t *testing.T) {
+	spanRecorder := tracetest.NewSpanRecorder()
+	tracerProvider := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(spanRecorder),
+	)
+	originalProvider := otel.GetTracerProvider()
+	otel.SetTracerProvider(tracerProvider)
+	defer otel.SetTracerProvider(originalProvider)
+
+	t.Run("successful tool execution creates span with correct attributes", func(t *testing.T) {
+		spanRecorder.Reset()
+
+		type TestParams struct {
+			Message string `json:"message" jsonschema:"description=Test message"`
+		}
+
+		testHandler := func(ctx context.Context, args TestParams) (string, error) {
+			return "Hello " + args.Message, nil
+		}
+
+		tool := MustTool("test_tool", "A test tool for tracing", testHandler)
+		ctx := WithGrafanaConfig(context.Background(), GrafanaConfig{
+			IncludeArgumentsInSpans: true,
+		})
+
+		request := mcp.CallToolRequest{
+			Params: struct {
+				Name      string    `json:"name"`
+				Arguments any       `json:"arguments,omitempty"`
+				Meta      *mcp.Meta `json:"_meta,omitempty"`
+			}{
+				Name: "test_tool",
+				Arguments: map[string]any{
+					"message": "world",
+				},
+			},
+		}
+
+		result, err := tool.Handler(ctx, request)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		spans := spanRecorder.Ended()
+		require.Len(t, spans, 1)
+
+		span := spans[0]
+		assert.Equal(t, "tools/call test_tool", span.Name())
+		assert.Equal(t, codes.Ok, span.Status().Code)
+
+		attributes := span.Attributes()
+		assertHasAttribute(t, attributes, "gen_ai.tool.name", "test_tool")
+		assertHasAttribute(t, attributes, "mcp.method.name", "tools/call")
+		assertHasAttribute(t, attributes, "gen_ai.tool.call.arguments", `{"message":"world"}`)
+	})
+
+	t.Run("tool execution error records error on span", func(t *testing.T) {
+		spanRecorder.Reset()
+
+		type TestParams struct {
+			ShouldFail bool `json:"shouldFail" jsonschema:"description=Whether to fail"`
+		}
+
+		testHandler := func(ctx context.Context, args TestParams) (string, error) {
+			if args.ShouldFail {
+				return "", assert.AnError
+			}
+			return "success", nil
+		}
+
+		tool := MustTool("failing_tool", "A tool that can fail", testHandler)
+		ctx := WithGrafanaConfig(context.Background(), GrafanaConfig{})
+
+		request := mcp.CallToolRequest{
+			Params: struct {
+				Name      string    `json:"name"`
+				Arguments any       `json:"arguments,omitempty"`
+				Meta      *mcp.Meta `json:"_meta,omitempty"`
+			}{
+				Name: "failing_tool",
+				Arguments: map[string]any{
+					"shouldFail": true,
+				},
+			},
+		}
+
+		result, err := tool.Handler(ctx, request)
+		assert.NoError(t, err)
+		require.NotNil(t, result)
+		assert.True(t, result.IsError)
+
+		spans := spanRecorder.Ended()
+		require.Len(t, spans, 1)
+
+		span := spans[0]
+		assert.Equal(t, "tools/call failing_tool", span.Name())
+		assert.Equal(t, codes.Error, span.Status().Code)
+		assert.Equal(t, assert.AnError.Error(), span.Status().Description)
+
+		hasErrorEvent := false
+		for _, event := range span.Events() {
+			if event.Name == "exception" {
+				hasErrorEvent = true
+				break
+			}
+		}
+		assert.True(t, hasErrorEvent, "expected error event to be recorded on span")
+	})
+
+	t.Run("spans always created for context propagation", func(t *testing.T) {
+		spanRecorder.Reset()
+
+		type TestParams struct {
+			Message string `json:"message" jsonschema:"description=Test message"`
+		}
+
+		testHandler := func(ctx context.Context, args TestParams) (string, error) {
+			return "processed", nil
+		}
+
+		tool := MustTool("context_prop_tool", "A tool for context propagation", testHandler)
+		ctx := WithGrafanaConfig(context.Background(), GrafanaConfig{})
+
+		request := mcp.CallToolRequest{
+			Params: struct {
+				Name      string    `json:"name"`
+				Arguments any       `json:"arguments,omitempty"`
+				Meta      *mcp.Meta `json:"_meta,omitempty"`
+			}{
+				Name: "context_prop_tool",
+				Arguments: map[string]any{
+					"message": "test",
+				},
+			},
+		}
+
+		result, err := tool.Handler(ctx, request)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		spans := spanRecorder.Ended()
+		require.Len(t, spans, 1)
+
+		span := spans[0]
+		assert.Equal(t, "tools/call context_prop_tool", span.Name())
+		assert.Equal(t, codes.Ok, span.Status().Code)
+	})
+
+	t.Run("arguments not logged by default", func(t *testing.T) {
+		spanRecorder.Reset()
+
+		type TestParams struct {
+			SensitiveData string `json:"sensitiveData" jsonschema:"description=Potentially sensitive data"`
+		}
+
+		testHandler := func(ctx context.Context, args TestParams) (string, error) {
+			return "processed", nil
+		}
+
+		tool := MustTool("sensitive_tool", "A tool with sensitive data", testHandler)
+		ctx := WithGrafanaConfig(context.Background(), GrafanaConfig{
+			IncludeArgumentsInSpans: false,
+		})
+
+		request := mcp.CallToolRequest{
+			Params: struct {
+				Name      string    `json:"name"`
+				Arguments any       `json:"arguments,omitempty"`
+				Meta      *mcp.Meta `json:"_meta,omitempty"`
+			}{
+				Name: "sensitive_tool",
+				Arguments: map[string]any{
+					"sensitiveData": "user@example.com",
+				},
+			},
+		}
+
+		result, err := tool.Handler(ctx, request)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		spans := spanRecorder.Ended()
+		require.Len(t, spans, 1)
+
+		span := spans[0]
+		assert.Equal(t, "tools/call sensitive_tool", span.Name())
+		assert.Equal(t, codes.Ok, span.Status().Code)
+
+		attributes := span.Attributes()
+		assertHasAttribute(t, attributes, "gen_ai.tool.name", "sensitive_tool")
+		assertHasAttribute(t, attributes, "mcp.method.name", "tools/call")
+		for _, attr := range attributes {
+			assert.NotEqual(t, "gen_ai.tool.call.arguments", string(attr.Key), "arguments should not be logged by default")
+		}
+	})
+
+	t.Run("arguments logged when argument logging enabled", func(t *testing.T) {
+		spanRecorder.Reset()
+
+		type TestParams struct {
+			SafeData string `json:"safeData" jsonschema:"description=Non-sensitive data"`
+		}
+
+		testHandler := func(ctx context.Context, args TestParams) (string, error) {
+			return "processed", nil
+		}
+
+		tool := MustTool("debug_tool", "A tool for debugging", testHandler)
+		ctx := WithGrafanaConfig(context.Background(), GrafanaConfig{
+			IncludeArgumentsInSpans: true,
+		})
+
+		request := mcp.CallToolRequest{
+			Params: struct {
+				Name      string    `json:"name"`
+				Arguments any       `json:"arguments,omitempty"`
+				Meta      *mcp.Meta `json:"_meta,omitempty"`
+			}{
+				Name: "debug_tool",
+				Arguments: map[string]any{
+					"safeData": "debug-value",
+				},
+			},
+		}
+
+		result, err := tool.Handler(ctx, request)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		spans := spanRecorder.Ended()
+		require.Len(t, spans, 1)
+
+		span := spans[0]
+		assert.Equal(t, "tools/call debug_tool", span.Name())
+		assert.Equal(t, codes.Ok, span.Status().Code)
+
+		attributes := span.Attributes()
+		assertHasAttribute(t, attributes, "gen_ai.tool.name", "debug_tool")
+		assertHasAttribute(t, attributes, "mcp.method.name", "tools/call")
+		assertHasAttribute(t, attributes, "gen_ai.tool.call.arguments", `{"safeData":"debug-value"}`)
+	})
+}
+
+func TestExtractTraceContext(t *testing.T) {
+	t.Run("no meta returns original context", func(t *testing.T) {
+		ctx := context.Background()
+		request := mcp.CallToolRequest{}
+		result := extractTraceContext(ctx, request)
+		assert.Equal(t, ctx, result)
+	})
+
+	t.Run("empty meta returns original context", func(t *testing.T) {
+		ctx := context.Background()
+		request := mcp.CallToolRequest{}
+		request.Params.Meta = &mcp.Meta{}
+		result := extractTraceContext(ctx, request)
+		assert.Equal(t, ctx, result)
+	})
+
+	t.Run("valid traceparent extracts span context", func(t *testing.T) {
+		ctx := context.Background()
+		request := mcp.CallToolRequest{}
+		request.Params.Meta = &mcp.Meta{
+			AdditionalFields: map[string]any{
+				"traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+			},
+		}
+		result := extractTraceContext(ctx, request)
+
+		sc := trace.SpanContextFromContext(result)
+		assert.True(t, sc.IsValid())
+		assert.Equal(t, "4bf92f3577b34da6a3ce929d0e0e4736", sc.TraceID().String())
+		assert.Equal(t, "00f067aa0ba902b7", sc.SpanID().String())
+	})
+
+	t.Run("invalid traceparent returns context unchanged", func(t *testing.T) {
+		ctx := context.Background()
+		request := mcp.CallToolRequest{}
+		request.Params.Meta = &mcp.Meta{
+			AdditionalFields: map[string]any{
+				"traceparent": "not-a-valid-traceparent",
+			},
+		}
+		result := extractTraceContext(ctx, request)
+		sc := trace.SpanContextFromContext(result)
+		assert.False(t, sc.IsValid())
+	})
+}
+
+func assertHasAttribute(t *testing.T, attributes []attribute.KeyValue, key string, expectedValue string) {
+	t.Helper()
+	for _, attr := range attributes {
+		if string(attr.Key) == key {
+			assert.Equal(t, expectedValue, attr.Value.AsString())
+			return
+		}
+	}
+	t.Errorf("expected attribute %s with value %s not found", key, expectedValue)
 }

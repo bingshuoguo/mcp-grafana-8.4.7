@@ -20,7 +20,6 @@ import (
 
 	"github.com/go-openapi/strfmt"
 	"github.com/grafana/grafana-openapi-client-go/client"
-	"github.com/grafana/incident-go"
 	"github.com/mark3labs/mcp-go/server"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
@@ -657,82 +656,6 @@ func GrafanaClientFromContext(ctx context.Context) *client.GrafanaHTTPAPI {
 	return c
 }
 
-type incidentClientKey struct{}
-
-// ExtractIncidentClientFromEnv is a StdioContextFunc that creates and injects a Grafana Incident client into the context.
-// It configures the client using environment variables and applies any custom TLS settings from the context.
-var ExtractIncidentClientFromEnv server.StdioContextFunc = func(ctx context.Context) context.Context {
-	grafanaURL, apiKey := urlAndAPIKeyFromEnv()
-	if grafanaURL == "" {
-		grafanaURL = defaultGrafanaURL
-	}
-	incidentURL := fmt.Sprintf("%s/api/plugins/grafana-irm-app/resources/api/v1/", grafanaURL)
-	parsedURL, err := url.Parse(incidentURL)
-	if err != nil {
-		panic(fmt.Errorf("invalid incident URL %s: %w", incidentURL, err))
-	}
-	slog.Debug("Creating Incident client", "url", parsedURL.Redacted(), "api_key_set", apiKey != "")
-	client := incident.NewClient(incidentURL, apiKey)
-
-	config := GrafanaConfigFromContext(ctx)
-	transport, err := BuildTransport(&config, nil)
-	if err != nil {
-		slog.Error("Failed to create custom transport for incident client, using default", "error", err)
-	} else {
-		orgIDWrapped := NewOrgIDRoundTripper(transport, config.OrgID)
-		client.HTTPClient.Transport = wrapWithUserAgent(orgIDWrapped)
-		if config.TLSConfig != nil {
-			slog.Debug("Using custom TLS configuration, user agent, and org ID support for incident client",
-				"cert_file", config.TLSConfig.CertFile,
-				"ca_file", config.TLSConfig.CAFile,
-				"skip_verify", config.TLSConfig.SkipVerify)
-		}
-	}
-
-	return context.WithValue(ctx, incidentClientKey{}, client)
-}
-
-// ExtractIncidentClientFromHeaders is a HTTPContextFunc that creates and injects a Grafana Incident client into the context.
-// It uses HTTP headers for configuration with environment variable fallbacks, enabling per-request incident management configuration.
-var ExtractIncidentClientFromHeaders httpContextFunc = func(ctx context.Context, req *http.Request) context.Context {
-	grafanaURL, apiKey, _, orgID := extractKeyGrafanaInfoFromReq(req)
-	incidentURL := fmt.Sprintf("%s/api/plugins/grafana-irm-app/resources/api/v1/", grafanaURL)
-	client := incident.NewClient(incidentURL, apiKey)
-
-	config := GrafanaConfigFromContext(ctx)
-	transport, err := BuildTransport(&config, nil)
-	if err != nil {
-		slog.Error("Failed to create custom transport for incident client, using default", "error", err)
-	} else {
-		orgIDWrapped := NewOrgIDRoundTripper(transport, orgID)
-		client.HTTPClient.Transport = wrapWithUserAgent(orgIDWrapped)
-		if config.TLSConfig != nil {
-			slog.Debug("Using custom TLS configuration, user agent, and org ID support for incident client",
-				"cert_file", config.TLSConfig.CertFile,
-				"ca_file", config.TLSConfig.CAFile,
-				"skip_verify", config.TLSConfig.SkipVerify)
-		}
-	}
-
-	return context.WithValue(ctx, incidentClientKey{}, client)
-}
-
-// WithIncidentClient sets the Grafana Incident client in the context.
-// This client is used for managing incidents, activities, and other IRM (Incident Response Management) operations.
-func WithIncidentClient(ctx context.Context, client *incident.Client) context.Context {
-	return context.WithValue(ctx, incidentClientKey{}, client)
-}
-
-// IncidentClientFromContext retrieves the Grafana Incident client from the context.
-// Returns nil if no client has been set, indicating that incident management features are not available.
-func IncidentClientFromContext(ctx context.Context) *incident.Client {
-	c, ok := ctx.Value(incidentClientKey{}).(*incident.Client)
-	if !ok {
-		return nil
-	}
-	return c
-}
-
 // ComposeStdioContextFuncs composes multiple StdioContextFuncs into a single one.
 // Functions are applied in order, allowing each to modify the context before passing it to the next.
 func ComposeStdioContextFuncs(funcs ...server.StdioContextFunc) server.StdioContextFunc {
@@ -767,7 +690,7 @@ func ComposeHTTPContextFuncs(funcs ...httpContextFunc) server.HTTPContextFunc {
 }
 
 // ComposedStdioContextFunc returns a StdioContextFunc that comprises all predefined StdioContextFuncs.
-// It sets up the complete context for stdio transport including Grafana configuration, client initialization from environment variables, and incident management support.
+// It sets up the complete context for stdio transport including Grafana configuration and client initialization from environment variables.
 func ComposedStdioContextFunc(config GrafanaConfig) server.StdioContextFunc {
 	return ComposeStdioContextFuncs(
 		func(ctx context.Context) context.Context {
@@ -775,7 +698,6 @@ func ComposedStdioContextFunc(config GrafanaConfig) server.StdioContextFunc {
 		},
 		ExtractGrafanaInfoFromEnv,
 		ExtractGrafanaClientFromEnv,
-		ExtractIncidentClientFromEnv,
 	)
 }
 
@@ -788,7 +710,6 @@ func ComposedSSEContextFunc(config GrafanaConfig) server.SSEContextFunc {
 		},
 		ExtractGrafanaInfoFromHeaders,
 		ExtractGrafanaClientFromHeaders,
-		ExtractIncidentClientFromHeaders,
 	)
 }
 
@@ -801,6 +722,5 @@ func ComposedHTTPContextFunc(config GrafanaConfig) server.HTTPContextFunc {
 		},
 		ExtractGrafanaInfoFromHeaders,
 		ExtractGrafanaClientFromHeaders,
-		ExtractIncidentClientFromHeaders,
 	)
 }

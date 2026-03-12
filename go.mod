@@ -1,4 +1,4 @@
-module github.com/grafana/mcp-grafana
+module github.com/bingshuoguo/grafana-v8-mcp
 
 go 1.24.9
 
@@ -12,7 +12,6 @@ require (
 	github.com/grafana/amixr-api-go-client v0.0.27
 	github.com/grafana/grafana-openapi-client-go v0.0.0-20251202103709-7ef691d4df1d
 	github.com/grafana/grafana-plugin-sdk-go v0.284.0
-	github.com/grafana/incident-go v0.0.0-20251003115753-d71681611ddd
 	github.com/grafana/pyroscope/api v1.2.0
 	github.com/invopop/jsonschema v0.13.0
 	github.com/mark3labs/mcp-go v0.43.2
