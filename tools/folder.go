@@ -8,7 +8,7 @@ import (
 	"github.com/grafana/grafana-openapi-client-go/models"
 	"github.com/mark3labs/mcp-go/mcp"
 
-	mcpgrafana "github.com/grafana/mcp-grafana"
+	mcpgrafana "github.com/bingshuoguo/grafana-v8-mcp"
 )
 
 type ListFoldersRequest struct {

@@ -9,7 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	mcpgrafana "github.com/grafana/mcp-grafana"
+	mcpgrafana "github.com/bingshuoguo/grafana-v8-mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

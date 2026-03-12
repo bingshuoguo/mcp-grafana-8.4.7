@@ -14,7 +14,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 
-	mcpgrafana "github.com/grafana/mcp-grafana"
+	mcpgrafana "github.com/bingshuoguo/grafana-v8-mcp"
 )
 
 type QueryPrometheusRequest struct {

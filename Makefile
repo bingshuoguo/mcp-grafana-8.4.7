@@ -10,7 +10,7 @@ help: ## Print this help message.
 
 .PHONY: build-image
 build-image: ## Build the Docker image.
-	docker build -t mcp-grafana:latest .
+	docker build -t grafana-v8-mcp:latest .
 
 .PHONY: build
 build: ## Build the binary.

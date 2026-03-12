@@ -16,9 +16,9 @@ import (
 
 	"github.com/mark3labs/mcp-go/server"
 
-	mcpgrafana "github.com/grafana/mcp-grafana"
-	"github.com/grafana/mcp-grafana/observability"
-	grafanatools "github.com/grafana/mcp-grafana/tools"
+	mcpgrafana "github.com/bingshuoguo/grafana-v8-mcp"
+	"github.com/bingshuoguo/grafana-v8-mcp/observability"
+	grafanatools "github.com/bingshuoguo/grafana-v8-mcp/tools"
 	"go.opentelemetry.io/otel/semconv/v1.39.0/mcpconv"
 )
 

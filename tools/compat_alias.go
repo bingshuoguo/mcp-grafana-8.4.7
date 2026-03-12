@@ -5,7 +5,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 
-	mcpgrafana "github.com/grafana/mcp-grafana"
+	mcpgrafana "github.com/bingshuoguo/grafana-v8-mcp"
 )
 
 // update_dashboard is a compat alias for upsert_dashboard.

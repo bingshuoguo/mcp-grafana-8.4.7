@@ -13,12 +13,12 @@ This guide helps you set up the `mcp-grafana` server for Claude Desktop.
 ### Option 1: Go install
 
 ```bash
-GOBIN="$HOME/go/bin" go install github.com/grafana/mcp-grafana/cmd/mcp-grafana@latest
+GOBIN="$HOME/go/bin" go install github.com/bingshuoguo/grafana-v8-mcp/cmd/mcp-grafana@latest
 ```
 
 ### Option 2: Download binary
 
-Get the latest release from [GitHub Releases](https://github.com/grafana/mcp-grafana/releases) and add to your PATH.
+Get the latest release from [GitHub Releases](https://github.com/bingshuoguo/grafana-v8-mcp/releases) and add to your PATH.
 
 ### Option 3: Docker
 

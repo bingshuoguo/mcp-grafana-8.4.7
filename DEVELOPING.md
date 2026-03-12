@@ -1,4 +1,4 @@
-# Developing mcp-grafana
+# Developing grafana-v8-mcp
 
 ## Prerequisites
 
@@ -103,8 +103,7 @@ Releases follow a branch-based workflow with automated tagging and publishing.
 
 4. **Automated publishing.** The tag triggers:
    - **goreleaser** — builds binaries for Linux/macOS/Windows and creates a GitHub Release with notes extracted from CHANGELOG.md
-   - **Docker** — builds and pushes `grafana/mcp-grafana:0.11.0` (+ `:latest` for stable releases) and Alpine variants
-   - **MCP Registry** — publishes the updated server metadata
+   - **Docker** — builds and pushes `bingshuoguo/grafana-v8-mcp:<version>` (+ `:latest` for stable releases) and Alpine variants
 
 ### CHANGELOG format
 
@@ -119,5 +118,5 @@ The project uses [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with t
 Each entry should be a concise, human-readable description with a link to the PR:
 
 ```markdown
-- Description of the change ([#123](https://github.com/grafana/mcp-grafana/pull/123))
+- Description of the change ([#123](https://github.com/bingshuoguo/grafana-v8-mcp/pull/123))
 ```

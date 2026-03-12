@@ -1,7 +1,7 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-`mcp-grafana` is a Go project with a small Python E2E suite.
+`grafana-v8-mcp` is a Go project with a small Python E2E suite.
 - `cmd/mcp-grafana/`: main server entrypoint.
 - Root `*.go` files: core server/session/proxy wiring (`mcpgrafana.go`, `session.go`, `tools.go`, `proxied_*.go`).
 - `tools/`: tool implementations and most Go test coverage.
@@ -11,7 +11,7 @@
 - `docs/`, `examples/`, `observability/`, `assets/`: documentation, examples, telemetry helpers, static assets.
 
 ## Build, Test, and Development Commands
-- `make build`: build `dist/mcp-grafana`.
+- `make build`: build `dist/mcp-grafana` (binary name kept for compatibility).
 - `make build-image`: build local Docker image.
 - `make run`: run locally in stdio mode.
 - `make run-sse`: run with SSE transport, debug logs, and metrics.

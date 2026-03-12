@@ -26,7 +26,7 @@ import (
 	v84search "github.com/grafana/grafana-openapi-client-go/client/search"
 	v84signedin "github.com/grafana/grafana-openapi-client-go/client/signed_in_user"
 	v84teams "github.com/grafana/grafana-openapi-client-go/client/teams"
-	mcpgrafana "github.com/grafana/mcp-grafana"
+	mcpgrafana "github.com/bingshuoguo/grafana-v8-mcp"
 )
 
 const orgIDHeader = "X-Grafana-Org-Id"

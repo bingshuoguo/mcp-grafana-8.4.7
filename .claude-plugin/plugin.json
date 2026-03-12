@@ -1,12 +1,12 @@
 {
   "name": "grafana",
   "version": "0.7.6",
-  "description": "A Model Context Protocol (MCP) server for Grafana providing access to dashboards, datasources, and querying capabilities",
+  "description": "A Model Context Protocol (MCP) server for Grafana 8.4.7 providing access to dashboards, datasources, annotations, and legacy alerting",
   "author": {
-    "name": "Grafana Labs"
+    "name": "bingshuoguo"
   },
-  "homepage": "https://github.com/grafana/mcp-grafana",
-  "repository": "https://github.com/grafana/mcp-grafana",
+  "homepage": "https://github.com/bingshuoguo/grafana-v8-mcp",
+  "repository": "https://github.com/bingshuoguo/grafana-v8-mcp",
   "license": "Apache-2.0",
   "mcpServers": {
     "grafana": {
