@@ -4,10 +4,42 @@ A [Model Context Protocol][mcp] (MCP) server for **Grafana 8.4.7**, forked from 
 
 This variant provides a dedicated tool profile (`v84`) that targets the Grafana 8.4.7 REST API, using **ID-first datasource resolution** and **raw HTTP fallbacks** where the upstream OpenAPI client models do not match the 8.4.7 API behaviour.
 
+## Quick Start
+
+The recommended installation and connection path is:
+
+1. Install the `mcp-grafana` binary from [GitHub Releases](https://github.com/bingshuoguo/grafana-v8-mcp/releases) or `go install`
+2. Verify the binary locally
+3. Configure your MCP client to launch `mcp-grafana` over `stdio`
+
+```bash
+go install github.com/bingshuoguo/grafana-v8-mcp/cmd/mcp-grafana@latest
+mcp-grafana --version
+```
+
+Minimal MCP client configuration:
+
+```json
+{
+  "mcpServers": {
+    "grafana": {
+      "command": "mcp-grafana",
+      "args": [],
+      "env": {
+        "GRAFANA_URL": "http://localhost:3000",
+        "GRAFANA_SERVICE_ACCOUNT_TOKEN": "<your-token>"
+      }
+    }
+  }
+}
+```
+
+If your client cannot find `mcp-grafana` in `PATH`, use the absolute path to the binary instead.
+
 ## Requirements
 
 - **Grafana 8.4.7** (or any 8.x release with the same API surface)
-- Go 1.24+ (for building from source)
+- Go 1.24+ (only needed for `go install` or building from source)
 
 ## Features
 
@@ -139,9 +171,9 @@ _\* Write tools. Disabled when `--disable-write` is set._
 
 ### Prerequisites
 
-- **Go 1.24+** (for building from source)
 - **Grafana 8.4.7** instance, accessible via HTTP/HTTPS
 - A Grafana **Service Account Token** or **username/password** for authentication
+- **Go 1.24+** only if you install via `go install` or build from source
 
 ### Step 1: Prepare Grafana Credentials
 
@@ -160,9 +192,25 @@ Use the admin or any other user's credentials. These will be set as `GRAFANA_USE
 
 ### Step 2: Install the Binary
 
-Choose one of the following methods:
+Choose one of the following methods. For most users, GitHub Releases or `go install` is the simplest path.
 
-#### Method 1: Build from Source
+#### Method 1: GitHub Releases (recommended)
+
+Download the archive for your platform from [GitHub Releases](https://github.com/bingshuoguo/grafana-v8-mcp/releases), extract it, and place `mcp-grafana` somewhere in your `PATH`.
+
+The release page includes platform-specific archives and a checksum file for verification.
+
+#### Method 2: Go Install
+
+If you have a Go toolchain, install directly into `$GOBIN`:
+
+```bash
+GOBIN="$HOME/go/bin" go install github.com/bingshuoguo/grafana-v8-mcp/cmd/mcp-grafana@latest
+```
+
+Make sure `$HOME/go/bin` is in your `PATH`.
+
+#### Method 3: Build from Source
 
 ```bash
 # Clone the repository
@@ -173,17 +221,7 @@ cd mcp-grafana-8.4.7
 make build
 ```
 
-#### Method 2: Go Install
-
-If you have a Go toolchain, install directly into `$GOBIN`:
-
-```bash
-GOBIN="$HOME/go/bin" go install ./cmd/mcp-grafana
-```
-
-Make sure `$HOME/go/bin` is in your `PATH`.
-
-#### Method 3: Docker Image
+#### Method 4: Docker Image
 
 ```bash
 # Build the Docker image locally
@@ -195,17 +233,33 @@ make build-image
 
 ```bash
 # Check the binary version
-./dist/mcp-grafana --version
+mcp-grafana --version
 
 # Quick health check (should connect to your Grafana and return version info)
 GRAFANA_URL=http://localhost:3000 \
 GRAFANA_SERVICE_ACCOUNT_TOKEN=<your-token> \
-./dist/mcp-grafana --version
+mcp-grafana --version
 ```
 
 ### Step 4: Configure Your MCP Client
 
-Choose the configuration that matches your AI assistant / IDE.
+The default and recommended transport is `stdio`. Most MCP clients can launch the binary directly:
+
+- `command = "mcp-grafana"` when the binary is in `PATH`
+- `command = "/absolute/path/to/mcp-grafana"` if your client cannot resolve the binary
+
+Docker and HTTP-based transports are available, but they are secondary options for isolated or remote deployments.
+
+Choose the client guide that matches your AI assistant / IDE:
+
+- [Claude Desktop](docs/clients/claude-desktop.md)
+- [Claude Code](docs/clients/claude-code.md)
+- [Codex CLI](docs/clients/codex.md)
+- [Cursor](docs/clients/cursor.md)
+- [Gemini CLI](docs/clients/gemini-cli.md)
+- [Windsurf](docs/clients/windsurf.md)
+- [Zed](docs/clients/zed.md)
+- [VS Code and GitHub Copilot](docs/clients/vscode-copilot.md)
 
 #### Cursor IDE
 
@@ -288,7 +342,7 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) o
         "run", "--rm", "-i",
         "-e", "GRAFANA_URL",
         "-e", "GRAFANA_SERVICE_ACCOUNT_TOKEN",
-        "mcp-grafana:latest",
+        "bingshuoguo/grafana-v8-mcp:latest",
         "-t", "stdio"
       ],
       "env": {
@@ -360,11 +414,18 @@ If something goes wrong, check the following:
 | `GRAFANA_ORG_ID` | No | Organization ID for multi-org support |
 | `GRAFANA_EXTRA_HEADERS` | No | JSON object of extra HTTP headers (e.g., `{"X-Custom":"value"}`) |
 
+## Recommended Connection Modes
+
+- **Binary + stdio (recommended):** best default for local use, the shortest execution path, and the least moving parts.
+- **Docker + stdio:** useful when you want isolation or do not want to install the binary on the host.
+- **SSE / streamable-http:** useful for remote deployments or when multiple clients need to share one running MCP server.
+- **`npx mcp-remote`:** a bridge to a remote SSE server, not the primary installation path for this repository.
+
 ## Advanced Usage
 
 ### SSE / Streamable HTTP Mode
 
-For multi-client or remote access scenarios, you can run the server as an HTTP service:
+For multi-client or remote access scenarios, you can run the server as an HTTP service. This is a secondary option compared with running the binary locally over `stdio`.
 
 ```bash
 # SSE mode (port 8000)
@@ -401,7 +462,7 @@ VSCode / Cursor can connect to the SSE endpoint:
 docker run --rm -p 8000:8000 \
   -e GRAFANA_URL=http://host.docker.internal:3000 \
   -e GRAFANA_SERVICE_ACCOUNT_TOKEN=<token> \
-  mcp-grafana:latest
+  bingshuoguo/grafana-v8-mcp:latest
 ```
 
 The Docker image defaults to SSE mode on port 8000. Override with `-t stdio` for stdio mode.

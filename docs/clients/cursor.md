@@ -5,8 +5,18 @@ This guide helps you set up the `mcp-grafana` server for Cursor.
 ## Prerequisites
 
 - Cursor IDE installed
-- Grafana 9.0+ with a service account token
+- Grafana 8.4.7 (or another 8.x release with the same API surface)
 - `mcp-grafana` binary in your PATH
+
+## Install the binary
+
+```bash
+go install github.com/bingshuoguo/grafana-v8-mcp/cmd/mcp-grafana@latest
+```
+
+Or download the archive for your platform from [GitHub Releases](https://github.com/bingshuoguo/grafana-v8-mcp/releases) and put `mcp-grafana` in your `PATH`.
+
+If Cursor cannot find `mcp-grafana`, use the absolute binary path in `command`.
 
 ## Configuration
 
@@ -24,6 +34,8 @@ Two options for configuration location:
 3. This opens `~/.cursor/mcp.json` for editing
 
 ### Manual configuration
+
+Cursor can launch the local binary directly over `stdio`, which is the recommended path:
 
 Create or edit `~/.cursor/mcp.json`:
 
@@ -57,7 +69,7 @@ Create or edit `~/.cursor/mcp.json`:
         "GRAFANA_URL",
         "-e",
         "GRAFANA_SERVICE_ACCOUNT_TOKEN",
-        "mcp/grafana"
+        "bingshuoguo/grafana-v8-mcp:latest"
       ],
       "env": {
         "GRAFANA_URL": "http://host.docker.internal:3000",
@@ -75,7 +87,7 @@ Create or edit `~/.cursor/mcp.json`:
   "mcpServers": {
     "grafana": {
       "command": "mcp-grafana",
-      "args": ["-debug"],
+      "args": ["--debug"],
       "env": {
         "GRAFANA_URL": "http://localhost:3000",
         "GRAFANA_SERVICE_ACCOUNT_TOKEN": "<your-token>"
@@ -100,12 +112,13 @@ Create or edit `~/.cursor/mcp.json`:
 - Check JSON syntax (trailing commas break it)
 - Restart Cursor
 - Verify binary path: `which mcp-grafana`
+- Use the absolute binary path if Cursor does not inherit your shell `PATH`
 
 **Tools not working:**
 
 - Click refresh button in MCP settings
 - Check Grafana token permissions
-- Enable `-debug` flag and check output
+- Enable `--debug` and check output
 
 ## Read-only mode
 

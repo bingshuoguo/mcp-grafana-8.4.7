@@ -42,6 +42,22 @@ jobs:
             echo "Release ${GITHUB_REF_NAME}" > /tmp/release-notes.md
           fi
 
+          cat <<EOF >> /tmp/release-notes.md
+
+          ## Install
+
+          - Download the archive for your platform from this release and put \`mcp-grafana\` in your \`PATH\`
+          - Or install with Go:
+
+            \`\`\`bash
+            go install github.com/bingshuoguo/grafana-v8-mcp/cmd/mcp-grafana@latest
+            \`\`\`
+
+          ## Recommended MCP connection mode
+
+          Use the local \`mcp-grafana\` binary over \`stdio\` when your client supports launching local MCP servers directly. Use SSE or streamable HTTP only for remote or shared deployments.
+          EOF
+
       - name: Set up Go
         uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
         with:

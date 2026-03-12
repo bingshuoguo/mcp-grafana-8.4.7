@@ -18,6 +18,9 @@ builds:
       - linux
       - windows
       - darwin
+    goarch:
+      - amd64
+      - arm64
     ldflags: "-s -w -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser"
   - id: gemini-cli-extension
     env:
@@ -86,6 +89,9 @@ archives:
     format_overrides:
       - goos: windows
         formats: zip
+
+checksum:
+  name_template: checksums.txt
 
 changelog:
   # In CI, release notes are extracted from CHANGELOG.md and passed via

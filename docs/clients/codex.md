@@ -5,8 +5,18 @@ This guide helps you set up the `mcp-grafana` server for the OpenAI Codex CLI.
 ## Prerequisites
 
 - Codex CLI installed (`npm install -g @openai/codex`)
-- Grafana 9.0+ with a service account token
+- Grafana 8.4.7 (or another 8.x release with the same API surface)
 - `mcp-grafana` binary in your PATH
+
+## Install the binary
+
+```bash
+go install github.com/bingshuoguo/grafana-v8-mcp/cmd/mcp-grafana@latest
+```
+
+Or download the archive for your platform from [GitHub Releases](https://github.com/bingshuoguo/grafana-v8-mcp/releases) and put `mcp-grafana` in your `PATH`.
+
+If Codex cannot find `mcp-grafana`, switch `command` to the absolute binary path.
 
 ## Important: TOML format
 
@@ -15,6 +25,8 @@ Codex uses **TOML** configuration, not JSON. Configuration file: `~/.codex/confi
 ## Configuration
 
 ### CLI setup (recommended)
+
+Codex works best when it launches the local binary over `stdio`:
 
 ```bash
 codex mcp add grafana -- mcp-grafana
@@ -47,7 +59,7 @@ env = { GRAFANA_URL = "http://localhost:3000", GRAFANA_SERVICE_ACCOUNT_TOKEN = "
 ```toml
 [mcp_servers.grafana]
 command = "mcp-grafana"
-args = ["-debug"]
+args = ["--debug"]
 env = { GRAFANA_URL = "http://localhost:3000", GRAFANA_SERVICE_ACCOUNT_TOKEN = "<your-token>" }
 ```
 
@@ -56,7 +68,7 @@ env = { GRAFANA_URL = "http://localhost:3000", GRAFANA_SERVICE_ACCOUNT_TOKEN = "
 ```toml
 [mcp_servers.grafana]
 command = "docker"
-args = ["run", "--rm", "-i", "-e", "GRAFANA_URL", "-e", "GRAFANA_SERVICE_ACCOUNT_TOKEN", "mcp/grafana"]
+args = ["run", "--rm", "-i", "-e", "GRAFANA_URL", "-e", "GRAFANA_SERVICE_ACCOUNT_TOKEN", "bingshuoguo/grafana-v8-mcp:latest"]
 env = { GRAFANA_URL = "http://host.docker.internal:3000", GRAFANA_SERVICE_ACCOUNT_TOKEN = "<your-token>" }
 ```
 

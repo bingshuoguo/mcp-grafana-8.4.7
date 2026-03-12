@@ -5,8 +5,18 @@ This guide helps you set up the `mcp-grafana` server for Windsurf.
 ## Prerequisites
 
 - Windsurf IDE installed
-- Grafana 9.0+ with a service account token
+- Grafana 8.4.7 (or another 8.x release with the same API surface)
 - `mcp-grafana` binary in your PATH
+
+## Install the binary
+
+```bash
+go install github.com/bingshuoguo/grafana-v8-mcp/cmd/mcp-grafana@latest
+```
+
+Or download the archive for your platform from [GitHub Releases](https://github.com/bingshuoguo/grafana-v8-mcp/releases) and put `mcp-grafana` in your `PATH`.
+
+If Windsurf cannot find `mcp-grafana`, use the absolute binary path in `command`.
 
 ## Configuration
 
@@ -24,6 +34,8 @@ Configuration file location:
 3. Click "Add Server" or "View raw config"
 
 ### Manual configuration
+
+Windsurf can launch the local binary directly over `stdio`, which is the recommended path:
 
 Create or edit `~/.codeium/windsurf/mcp_config.json`:
 
@@ -57,7 +69,7 @@ Create or edit `~/.codeium/windsurf/mcp_config.json`:
         "GRAFANA_URL",
         "-e",
         "GRAFANA_SERVICE_ACCOUNT_TOKEN",
-        "mcp/grafana"
+        "bingshuoguo/grafana-v8-mcp:latest"
       ],
       "env": {
         "GRAFANA_URL": "http://host.docker.internal:3000",
@@ -75,7 +87,7 @@ Create or edit `~/.codeium/windsurf/mcp_config.json`:
   "mcpServers": {
     "grafana": {
       "command": "mcp-grafana",
-      "args": ["-debug"],
+      "args": ["--debug"],
       "env": {
         "GRAFANA_URL": "http://localhost:3000",
         "GRAFANA_SERVICE_ACCOUNT_TOKEN": "<your-token>"
@@ -111,7 +123,7 @@ Windsurf limits total MCP tools to 100. If you hit the limit:
 
 **SSE transport (remote server):**
 
-If you need HTTP-based connection instead of stdio:
+Use this only if you need an HTTP-based remote connection instead of the default local `stdio` process:
 
 ```bash
 mcp-grafana --transport streamable-http --address localhost:8000

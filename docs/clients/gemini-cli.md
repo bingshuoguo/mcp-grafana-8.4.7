@@ -5,14 +5,26 @@ This guide helps you set up the `mcp-grafana` server for the Google Gemini CLI.
 ## Prerequisites
 
 - Gemini CLI installed (`npm install -g @google/gemini-cli`)
-- Grafana 9.0+ with a service account token
+- Grafana 8.4.7 (or another 8.x release with the same API surface)
 - `mcp-grafana` binary in your PATH
+
+## Install the binary
+
+```bash
+go install github.com/bingshuoguo/grafana-v8-mcp/cmd/mcp-grafana@latest
+```
+
+Or download the archive for your platform from [GitHub Releases](https://github.com/bingshuoguo/grafana-v8-mcp/releases) and put `mcp-grafana` in your `PATH`.
+
+If Gemini CLI cannot find `mcp-grafana`, use the absolute binary path in `command`.
 
 ## Configuration
 
 Gemini CLI stores MCP configuration in `~/.gemini/settings.json`.
 
 ### Manual configuration
+
+Gemini CLI can launch the local binary directly over `stdio`, which is the recommended setup for local use:
 
 Create or edit `~/.gemini/settings.json`:
 
@@ -56,7 +68,7 @@ gemini mcp remove grafana
         "GRAFANA_URL",
         "-e",
         "GRAFANA_SERVICE_ACCOUNT_TOKEN",
-        "mcp/grafana"
+        "bingshuoguo/grafana-v8-mcp:latest"
       ],
       "env": {
         "GRAFANA_URL": "http://host.docker.internal:3000",
@@ -74,7 +86,7 @@ gemini mcp remove grafana
   "mcpServers": {
     "grafana": {
       "command": "mcp-grafana",
-      "args": ["-debug"],
+      "args": ["--debug"],
       "env": {
         "GRAFANA_URL": "http://localhost:3000",
         "GRAFANA_SERVICE_ACCOUNT_TOKEN": "<your-token>"
@@ -95,7 +107,7 @@ gemini mcp remove grafana
 
 ## SSE transport (remote server)
 
-For HTTP-based connection:
+Use this only when you want to connect to a separately running remote server. For local use, prefer the binary + `stdio` configuration above.
 
 1. Start `mcp-grafana` as an HTTP server:
 

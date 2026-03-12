@@ -5,7 +5,7 @@ This guide helps you set up the `mcp-grafana` server for Claude Desktop.
 ## Prerequisites
 
 - Claude Desktop installed
-- Grafana 9.0+ with a service account token
+- Grafana 8.4.7 (or another 8.x release with the same API surface)
 - `mcp-grafana` binary in your PATH
 
 ## Installation
@@ -22,7 +22,7 @@ Get the latest release from [GitHub Releases](https://github.com/bingshuoguo/gra
 
 ### Option 3: Docker
 
-No installation needed - use Docker in the configuration below.
+No installation needed, but this is a secondary option compared with running the local binary over `stdio`.
 
 ## Configuration
 
@@ -35,6 +35,8 @@ Edit your Claude Desktop configuration file:
 | Linux   | `~/.config/Claude/claude_desktop_config.json`                     |
 
 ### Binary configuration
+
+Claude Desktop works best when it launches the binary directly over `stdio`:
 
 ```json
 {
@@ -83,7 +85,7 @@ If you get `ENOENT`, use the full path:
         "GRAFANA_URL",
         "-e",
         "GRAFANA_SERVICE_ACCOUNT_TOKEN",
-        "mcp/grafana"
+        "bingshuoguo/grafana-v8-mcp:latest"
       ],
       "env": {
         "GRAFANA_URL": "http://host.docker.internal:3000",
@@ -96,14 +98,14 @@ If you get `ENOENT`, use the full path:
 
 ## Debug mode
 
-Add `-debug` to args for verbose logging:
+Add `--debug` to args for verbose logging:
 
 ```json
 {
   "mcpServers": {
     "grafana": {
       "command": "mcp-grafana",
-      "args": ["-debug"],
+      "args": ["--debug"],
       "env": {
         "GRAFANA_URL": "http://localhost:3000",
         "GRAFANA_SERVICE_ACCOUNT_TOKEN": "<your-token>"

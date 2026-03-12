@@ -5,12 +5,20 @@ This guide helps you set up the `mcp-grafana` server for VS Code with GitHub Cop
 ## Prerequisites
 
 - VS Code with GitHub Copilot extension
-- Grafana 9.0+ with a service account token
-- `mcp-grafana` binary installed
+- Grafana 8.4.7 (or another 8.x release with the same API surface)
+- `mcp-grafana` binary installed locally, or Docker available
 
 ## Important
 
-GitHub Copilot in VS Code uses **SSE transport**, not stdio. You need to run `mcp-grafana` as an HTTP server.
+GitHub Copilot in VS Code is one of the few clients here that uses **SSE transport**, not local `stdio`. You still install the same `mcp-grafana` binary, but Copilot connects to a running HTTP endpoint instead of launching the process directly.
+
+## Install the binary
+
+```bash
+go install github.com/bingshuoguo/grafana-v8-mcp/cmd/mcp-grafana@latest
+```
+
+Or download the archive for your platform from [GitHub Releases](https://github.com/bingshuoguo/grafana-v8-mcp/releases).
 
 ## Setup
 
@@ -28,7 +36,7 @@ Or with Docker:
 docker run --rm -p 8000:8000 \
   -e GRAFANA_URL=http://host.docker.internal:3000 \
   -e GRAFANA_SERVICE_ACCOUNT_TOKEN=<your-token> \
-  mcp/grafana --transport sse --address :8000
+  bingshuoguo/grafana-v8-mcp:latest --transport sse --address :8000
 ```
 
 ### 2. Configure VS Code
@@ -52,7 +60,7 @@ Or use workspace settings (`.vscode/settings.json`) for project-specific config.
 Start the server with debug logging:
 
 ```bash
-mcp-grafana --transport sse --address localhost:8000 -debug
+mcp-grafana --transport sse --address localhost:8000 --debug
 ```
 
 ## Verify configuration

@@ -5,8 +5,18 @@ This guide helps you set up the `mcp-grafana` server for the Zed editor.
 ## Prerequisites
 
 - Zed editor installed
-- Grafana 9.0+ with a service account token
+- Grafana 8.4.7 (or another 8.x release with the same API surface)
 - `mcp-grafana` binary in your PATH
+
+## Install the binary
+
+```bash
+go install github.com/bingshuoguo/grafana-v8-mcp/cmd/mcp-grafana@latest
+```
+
+Or download the archive for your platform from [GitHub Releases](https://github.com/bingshuoguo/grafana-v8-mcp/releases) and put `mcp-grafana` in your `PATH`.
+
+If Zed cannot find `mcp-grafana`, use the absolute binary path in `command`.
 
 ## Configuration
 
@@ -20,6 +30,8 @@ Zed uses `context_servers` in `settings.json`, not `mcpServers`.
 4. Fill in command and args
 
 ### Manual configuration
+
+Zed can launch the local binary directly over `stdio`, which is the recommended local setup:
 
 Open Zed settings (Cmd+,) and add:
 
@@ -55,7 +67,7 @@ Open Zed settings (Cmd+,) and add:
         "GRAFANA_URL",
         "-e",
         "GRAFANA_SERVICE_ACCOUNT_TOKEN",
-        "mcp/grafana"
+        "bingshuoguo/grafana-v8-mcp:latest"
       ],
       "env": {
         "GRAFANA_URL": "http://host.docker.internal:3000",
@@ -73,7 +85,7 @@ Open Zed settings (Cmd+,) and add:
   "context_servers": {
     "grafana": {
       "command": "mcp-grafana",
-      "args": ["-debug"],
+      "args": ["--debug"],
       "env": {
         "GRAFANA_URL": "http://localhost:3000",
         "GRAFANA_SERVICE_ACCOUNT_TOKEN": "<your-token>"
@@ -120,6 +132,7 @@ Use with caution - this enables all MCP tools without confirmation.
 
 - Zed supports both stdio and HTTP transports
 - For remote servers, use native URL syntax or `mcp-remote` shim
+- For local setups, prefer the binary + `stdio` configuration above
 
 **Remote server (native URL syntax):**
 
