@@ -98,7 +98,7 @@ func TestAddV84ToolsDisablingAliasLeavesCanonical(t *testing.T) {
 	srv := server.NewMCPServer("test", "test")
 
 	AddV84Tools(srv, RegisterOptions{
-		EnableWriteTools:   true,
+		EnableWriteTools: true,
 		DisableTools:     []string{UpdateDashboardTool.Tool.Name},
 		DisableToolsSet:  true,
 	})
@@ -158,6 +158,40 @@ func TestFilterToolsWithOptionalAndWriteFlags(t *testing.T) {
 	assert.Contains(t, tools, ListAlertRulesTool.Tool.Name)
 	assert.Contains(t, tools, GetPanelImageTool.Tool.Name)
 	assert.NotContains(t, tools, CreateAlertRuleTool.Tool.Name)
+}
+
+func TestAddV84ToolsToolsetsActsAsAllowlist(t *testing.T) {
+	srv := server.NewMCPServer("test", "test")
+
+	AddV84Tools(srv, RegisterOptions{
+		EnableWriteTools: false,
+		Toolsets:         []string{"prometheus", "dashboards"},
+		ToolsetsSet:      true,
+	})
+
+	tools := srv.ListTools()
+	require.NotNil(t, tools)
+	assert.Contains(t, tools, QueryPrometheusTool.Tool.Name)
+	assert.Contains(t, tools, GetDashboardSummaryTool.Tool.Name)
+	assert.Contains(t, tools, UpsertDashboardTool.Tool.Name, "explicit toolset selection should override the default write/optional profile boundaries")
+	assert.NotContains(t, tools, QueryLokiLogsTool.Tool.Name)
+}
+
+func TestFilterToolsWarnsOnUnknownToolsets(t *testing.T) {
+	var logBuf bytes.Buffer
+	old := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logBuf, nil)))
+	defer slog.SetDefault(old)
+
+	srv := server.NewMCPServer("test", "test")
+	AddV84Tools(srv, RegisterOptions{
+		EnableWriteTools: true,
+		Toolsets:         []string{"unknown_toolset"},
+		ToolsetsSet:      true,
+	})
+
+	assert.Nil(t, srv.ListTools())
+	assert.Contains(t, logBuf.String(), "unknown toolset in --toolsets; ignoring")
 }
 
 func toolNames(tools []mcpgrafana.Tool) []string {

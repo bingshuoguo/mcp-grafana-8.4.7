@@ -24,6 +24,7 @@ import (
 type toolConfig struct {
 	disableWrite  bool
 	optionalTools bool
+	toolsets      toolNameList
 	enableTools   toolNameList
 	disableTools  toolNameList
 }
@@ -43,6 +44,7 @@ type grafanaConfig struct {
 func (tc *toolConfig) addFlags() {
 	flag.BoolVar(&tc.disableWrite, "disable-write", false, "Disable write tools (create/update operations)")
 	flag.BoolVar(&tc.optionalTools, "enable-optional-tools", false, "Enable optional tools (unified alerting, rendering)")
+	flag.Var(&tc.toolsets, "toolsets", "Enable only the specified built-in toolsets. Accepts repeated flags or comma-separated values")
 	flag.Var(&tc.enableTools, "enable-tools", "Enable only the specified exact public tool names. Accepts repeated flags or comma-separated values")
 	flag.Var(&tc.disableTools, "disable-tools", "Disable the specified exact public tool names. Accepts repeated flags or comma-separated values")
 }
@@ -58,20 +60,31 @@ func (gc *grafanaConfig) addFlags() {
 }
 
 func (tc *toolConfig) addTools(s *server.MCPServer) {
-	grafanatools.AddV84Tools(s, grafanatools.RegisterOptions{
+	grafanatools.AddV84Tools(s, tc.registerOptions())
+}
+
+func (tc *toolConfig) registerOptions() grafanatools.RegisterOptions {
+	return grafanatools.RegisterOptions{
 		EnableWriteTools:    !tc.disableWrite,
 		EnableOptionalTools: tc.optionalTools,
+		Toolsets:            tc.toolsets.Values(),
+		ToolsetsSet:         tc.toolsets.IsSet(),
 		EnableTools:         tc.enableTools.Values(),
 		EnableToolsSet:      tc.enableTools.IsSet(),
 		DisableTools:        tc.disableTools.Values(),
 		DisableToolsSet:     tc.disableTools.IsSet(),
-	})
+	}
 }
 
 func newServer(tc toolConfig, obs *observability.Observability) *server.MCPServer {
 	hooks := observability.MergeHooks(&server.Hooks{}, obs.MCPHooks())
 
 	s := server.NewMCPServer("mcp-grafana", mcpgrafana.Version(),
+		server.WithToolCapabilities(true),
+		server.WithPromptCapabilities(true),
+		server.WithResourceCapabilities(false, true),
+		server.WithRecovery(),
+		server.WithResourceRecovery(),
 		server.WithInstructions(`
 This server exposes Grafana 8.4.7 MCP tools.
 
@@ -84,12 +97,18 @@ Default capabilities:
 - Legacy alerting reads: /api/alerts and /api/alert-notifications.
 - Organization reads: list org users and teams.
 
+Additional MCP capabilities:
+- Toolsets for grouped discovery and selective enablement.
+- Read-only resources documenting available toolsets and recommended workflows.
+- Reusable prompts for dashboard, datasource, and alert investigations.
+
 Use only tools returned by list_tools. Some tools can be disabled via flags.
 `),
 		server.WithHooks(hooks),
 	)
 
 	tc.addTools(s)
+	addServerAssets(s, tc.registerOptions())
 	return s
 }
 

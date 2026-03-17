@@ -47,6 +47,15 @@ If your client cannot find `mcp-grafana` in `PATH`, use the absolute path to the
 
 ## Features
 
+### Full MCP Surface
+
+Beyond tools, the server now exposes:
+
+- `resources/list` and `resources/read` for server overview, built-in toolsets, and recommended workflows
+- `resources/templates/list` for per-toolset metadata at `grafana://toolsets/{name}`
+- `prompts/list` and `prompts/get` for reusable Grafana investigation workflows
+- `tools/list` with grouped toolset-oriented discovery
+
 ### Tool Profile: `v84`
 
 The `v84` profile registers **20 MVP tools** (15 read-only + 5 write) that cover the most common Grafana operations.
@@ -120,6 +129,9 @@ _\* Write tools. Disabled when `--disable-write` is set._
 - **Unified `APIError` model**: All tool error paths normalize errors into `APIError{statusCode, message, status, detail, upstream}`. Configuration/auth errors propagate as `HardError` for JSON-RPC protocol-level failures.
 - **`FlexibleID`**: Dashboard upsert response `id` is typed as `json.RawMessage` to handle both integer and string values.
 - **`jsonschema` struct tags**: All request structs carry `jsonschema` tags for MCP input schema generation. Commas in descriptions are escaped as `\\,` per linter rule.
+- **Toolsets for discoverability**: Related capabilities are grouped into built-in toolsets such as `dashboards`, `datasources`, `prometheus`, `loki`, `clickhouse`, `alerting`, and `write`.
+- **Prompt + resource guidance**: The server publishes investigation prompts and read-only resources so MCP clients can bootstrap better workflows without external instructions.
+- **Recovery middleware**: Tool and resource handlers use panic recovery middleware to avoid tearing down the session on a single bad call.
 
 ## CLI Flags Reference
 
@@ -138,10 +150,13 @@ _\* Write tools. Disabled when `--disable-write` is set._
 |------|---------|-------------|
 | `--disable-write` | `false` | Disable write tools (upsert_dashboard, create/update folder, create/patch annotation) |
 | `--enable-optional-tools` | `false` | Enable optional tools (unified alerting, rendering) |
+| `--toolsets` | | Enable only the listed built-in toolsets. Accepts repeated flags or comma-separated values |
 | `--enable-tools` | | Enable only the listed exact public tool names. Accepts repeated flags or comma-separated values |
 | `--disable-tools` | | Disable the listed exact public tool names. Accepts repeated flags or comma-separated values |
 
 When `--enable-tools` is set, it acts as an allowlist and overrides the default tool set (including `--disable-write`). For example, to expose only read-only tools plus `upsert_dashboard`: `--disable-write --enable-tools=get_health,search_dashboards,upsert_dashboard`.
+
+When `--toolsets` is set, it acts as a tool-category allowlist and selects from the full catalog. This is useful for clients that should only see a narrow operating surface such as `--toolsets=prometheus,loki`.
 
 ### Debug and Logging
 

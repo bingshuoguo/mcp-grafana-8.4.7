@@ -44,3 +44,22 @@ func TestToolNameListTracksExplicitEmptyInput(t *testing.T) {
 	assert.Nil(t, tools.Values())
 	assert.Equal(t, "", tools.String())
 }
+
+func TestToolConfigRegisterOptionsIncludesToolsets(t *testing.T) {
+	tc := toolConfig{
+		disableWrite:  true,
+		optionalTools: true,
+		toolsets:      toolNameList{values: []string{"dashboards", "prometheus"}, set: true},
+		enableTools:   toolNameList{values: []string{"get_health"}, set: true},
+		disableTools:  toolNameList{values: []string{"query_datasource"}, set: true},
+	}
+
+	opts := tc.registerOptions()
+
+	assert.False(t, opts.EnableWriteTools)
+	assert.True(t, opts.EnableOptionalTools)
+	assert.Equal(t, []string{"dashboards", "prometheus"}, opts.Toolsets)
+	assert.True(t, opts.ToolsetsSet)
+	assert.Equal(t, []string{"get_health"}, opts.EnableTools)
+	assert.Equal(t, []string{"query_datasource"}, opts.DisableTools)
+}
